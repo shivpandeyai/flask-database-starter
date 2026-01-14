@@ -86,7 +86,7 @@ def index():
     students = Student.query.all()  # Get all students
     teachers = Teacher.query.all()  # Get all teachers
     print(teachers)
-    return render_template('index.html', students=students, teachers=teachers)
+    return render_template('index.html', students=students)
 
 
 @app.route('/courses')
@@ -94,6 +94,11 @@ def courses():
     all_courses = Course.query.all()  # Get all courses
     return render_template('courses.html', courses=all_courses)
 
+
+@app.route('/teachers')
+def teachers():
+    all_teachers = Teacher.query.all()  # Get all teachers
+    return render_template('teachers.html', teachers=all_teachers)
 
 @app.route('/add-student', methods=['GET', 'POST'])
 def add_student():
@@ -129,12 +134,39 @@ def add_teacher():
         db.session.commit()  # Save to database
 
         flash('Teacher added successfully!', 'success')
-        return redirect(url_for('index'))
+        return redirect(url_for('teachers'))
 
     courses = Course.query.all()  # Get courses for dropdown
     return render_template('add_teacher.html', courses=courses)
 
-@app.route('/edit/<int:id>', methods=['GET', 'POST'])
+@app.route('/edit-teacher/<int:id>', methods=['GET', 'POST'])
+def edit_teacher(id):
+    # OLD WAY: conn.execute('SELECT * FROM students WHERE id = ?', (id,))
+    # NEW WAY:
+    teacher = Teacher.query.get_or_404(id)  # Get by ID or show 404 error
+
+    if request.method == 'POST':
+        teacher.name = request.form['name']  # Just update the object
+        teacher.email = request.form['email']
+        teacher.course_id = request.form['course_id']
+
+        db.session.commit()  # Save changes
+        flash('Teacher updated!', 'success')
+        return redirect(url_for('teachers'))
+    courses = Course.query.all()
+    return render_template('edit_teacher.html', teacher=teacher, courses=courses)
+
+
+@app.route('/delete-teacher/<int:id>')
+def delete_teacher(id):
+    teacher = Teacher.query.get_or_404(id)
+    db.session.delete(teacher)  # Delete the object
+    db.session.commit()
+
+    flash('Teacher deleted!', 'danger')
+    return redirect(url_for('teachers'))
+
+@app.route('/edit-student/<int:id>', methods=['GET', 'POST'])
 def edit_student(id):
     # OLD WAY: conn.execute('SELECT * FROM students WHERE id = ?', (id,))
     # NEW WAY:
@@ -150,10 +182,10 @@ def edit_student(id):
         return redirect(url_for('index'))
 
     courses = Course.query.all()
-    return render_template('edit.html', student=student, courses=courses)
+    return render_template('edit_student.html', student=student, courses=courses)
 
 
-@app.route('/delete/<int:id>')
+@app.route('/delete-student/<int:id>')
 def delete_student(id):
     student = Student.query.get_or_404(id)
     db.session.delete(student)  # Delete the object
