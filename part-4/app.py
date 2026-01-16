@@ -338,3 +338,24 @@ if __name__ == '__main__':
 # request.args.get()  - Get query parameters (?key=value)
 #
 # =============================================================================
+
+
+# =============================================================================
+# EXERCISE:
+# =============================================================================
+#
+# 1. Add pagination: `/api/books?page=1&per_page=10` 
+# Hint - the sqlalchemy provides paginate method. 
+# For ease of understanding, create a new api say /api/books-with-pagination which takes page number and number of books per page
+
+# 2. Add sorting: `/api/books?sort=title&order=desc`
+# For ease of understanding, create a new api say /api/books-with-sorting
+
+
+# 3. Create a simple frontend using JavaScript fetch()
+# This is a bigger exercise. Create a frontend in HTML and JS that uses all api routes and displays data dynamically, along with create/edit/delete functionality.
+# Since the API is through n through accessible on the computer/server, you don't need to use render_template from flask, instead, 
+# you can directly use ipaddress:portnumber/apiroute from any where. So your HTML JS code can be anywhere on computer (not necessarily in flask)  
+
+#
+# =============================================================================
