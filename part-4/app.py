@@ -16,8 +16,11 @@ Prerequisites: Complete part-3 (SQLAlchemy)
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from flask_cors import CORS
+
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///api_demo.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -277,28 +280,36 @@ def get_book(id):
         'book': book.to_dict()
     })
 
-# POST /api/books - Create new book
+# POST /api/books - Create book linked to author by author_id
+
 @app.route('/api/books', methods=['POST'])
 def create_book():
-    data = request.get_json()  # Get JSON data from request body
+    data = request.get_json()
 
-    # Validation
+    # 1. Basic Validation
     if not data:
         return jsonify({'success': False, 'error': 'No data provided'}), 400
 
-    if not data.get('title') or not data.get('author'):
-        return jsonify({'success': False, 'error': 'Title and author are required'}), 400
+    # 2. Relationship Validation
+    # We now require 'author_id' instead of the author's name string
+    author_id = data.get('author_id')
+    if not data.get('title') or not author_id:
+        return jsonify({'success': False, 'error': 'Title and Author selection are required'}), 400
 
-    # Check for duplicate ISBN
+    # 3. Check if the Author actually exists in the database
+    author = Author.query.get(author_id)
+    if not author:
+        return jsonify({'success': False, 'error': 'Selected author does not exist'}), 404
+
+    # 4. Check for duplicate ISBN
     if data.get('isbn'):
         existing = Book.query.filter_by(isbn=data['isbn']).first()
         if existing:
             return jsonify({'success': False, 'error': 'ISBN already exists'}), 400
-
-    # Create book
+    # 5.Create book linked to author by author_id
     new_book = Book(
         title=data['title'],
-        author=data['author'],
+        author_id=data['author_id'],
         year=data.get('year'),  # Optional field
         isbn=data.get('isbn')
     )
