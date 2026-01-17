@@ -31,26 +31,170 @@ db = SQLAlchemy(app)
 class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
-    author = db.Column(db.String(100), nullable=False)
+    # author = db.Column(db.String(100), nullable=False)
     year = db.Column(db.Integer)
     isbn = db.Column(db.String(20), unique=True)
+    author_id=db.Column(db.Integer, db.ForeignKey('author.id'), nullable=False)  #Foreign keyRelationship: one book has one author  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+   
+
+   
 
     def to_dict(self):  # Convert model to dictionary for JSON response
         return {
             'id': self.id,
             'title': self.title,
-            'author': self.author,
+            # 'author': self.author,
             'year': self.year,
             'isbn': self.isbn,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
 
+class Author(db.Model):
+    id=db.Column(db.Integer, primary_key=True)
+    name=db.Column(db.String(100),nullable= False)
+    email=db.Column(db.String(200),nullable= False)
+    bio=db.Column(db.String(500),nullable=False)
+    city=db.Column(db.String(200),nullable=False)
+
+  #Relationship: one author has many books
+    books=db.relationship('Book', backref='author', lazy=True) 
+
+   
+
+    def to_dict(self): #Convert model to disctionary for JSON response
+        return {
+            'id':self.id,
+            'name':self.name,
+            'email':self.email,
+            'bio':self.bio,
+            'city':self.city
+                }
+
+
+
 # =============================================================================
-# REST API ROUTES
+# REST API ROUTES for Authors
 # =============================================================================
 
+
+# ---------API endpoint to Get all Authors -------
+
+@app.route('/api/authors', methods=['GET'])
+def get_authors():
+    authors = Author.query.all()
+    return jsonify({
+        'success':True,
+        'count':len(authors),
+        'authors':[author.to_dict() for author in authors] #list of authors in dictionary form
+    })
+
+
+# ---------API endpoint to Get specific Author -------
+
+@app.route('/api/authors/<int:id>' , methods=['GET'])
+def get_author(id):
+    author=Author.query.get(id)
+
+    if not author:
+        return jsonify({
+            'success': False,
+            'error': 'Author Not Found'
+        }),404 # Not Found Status Code
+    
+    return jsonify({
+        'success':True,
+        'author':author.to_dict()
+    })
+
+
+# ---------API endpoint to Create new Author -------
+
+@app.route('/api/authors', methods=['POST'])
+def create_author():
+    data=request.get_json() #Get JSON data from Client side for new entry
+    
+    #For Validation during data entry
+   
+    if not data:
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+
+    if not data.get('name') or not data.get('email'):
+        return jsonify({'success': False, 'error': 'name and email are required'}), 400
+
+     # Create Author
+    new_author = Author(
+        name=data['name'],
+        email=data['email'],
+        bio=data['bio'],  
+        city=data['city']
+    )
+
+    db.session.add(new_author)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Author created successfully',
+        'author': new_author.to_dict()
+    }), 201  # 201 = Created
+
+# ---------API endpoint to Update existing Author -------
+
+@app.route('/api/authors/<int:id>', methods=['PUT'])
+def update_author(id):
+
+    author=Author.query.get(id)
+
+    if not author:
+        return jsonify({'success': False, 'error': 'Author not found'}), 404
+
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+
+    # Update fields if provided
+
+    if 'name' in data:
+        author.name = data['name']
+    if 'email' in data:
+        author.email = data['email']
+    if 'bio' in data:
+        author.bio = data['bio']
+    if 'city' in data:
+        author.city = data['city']
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Author updated successfully',
+        'author': author.to_dict()
+    })
+
+# ---------API endpoint to Delete existing Author -------
+
+@app.route('/api/authors/<int:id>', methods=['DELETE'])
+def delete_author(id):
+
+    author= Author.query.get(id)
+
+    if not author:
+        return jsonify({'success': False, 'error': 'Author not found'}), 404
+
+    db.session.delete(author)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Author deleted successfully'
+    })
+
+# =============================================================================
+# REST API ROUTES for Books 
+# =============================================================================
 # GET /api/books - Get all books
 @app.route('/api/books', methods=['GET'])
 def get_books():
@@ -61,6 +205,61 @@ def get_books():
         'books': [book.to_dict() for book in books]  # List comprehension to convert all
     })
 
+# GET /api/books with pagination 
+@app.route('/api/books-with-pagination', methods=['GET'])
+def get_books_paginated():
+
+    # -------- Pagination --------      
+    page = request.args.get('page', default=1, type=int)
+    per_page = request.args.get('per_page', default=10, type=int)
+    print(page, per_page)
+    query = Book.query
+
+    # Pagination
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+    print(paginated)
+    books = paginated.items
+    print(books)
+
+    return jsonify({
+        'success': True,
+        'page': page,
+        'per_page': per_page,
+        'total_pages': paginated.pages,
+        'total_records': paginated.total,
+        'count': len(books),
+        'books': [book.to_dict() for book in books]
+    })
+
+ # -------- Sorting --------
+@app.route('/api/books-with-sorting', methods=['GET'])
+def get_books_sorted():
+    sort = request.args.get('sort', default='id')
+    order = request.args.get('order', default='asc')
+    query = Book.query
+
+    # Validate sort field
+    if not hasattr(Book, sort):
+        return jsonify({
+            'success': False,
+            'error': f'Invalid sort field: {sort}'
+        }), 400
+
+    sort_column = getattr(Book, sort)
+
+    if order == 'desc':
+        sort_column = sort_column.desc()
+    else:
+        sort_column = sort_column.asc()
+
+    query = query.order_by(sort_column)
+    books = query.all()
+
+    return jsonify({
+        'success': True,
+        'count': len(books),
+        'books': [book.to_dict() for book in books]
+    })
 
 # GET /api/books/<id> - Get single book
 @app.route('/api/books/<int:id>', methods=['GET'])
@@ -77,7 +276,6 @@ def get_book(id):
         'success': True,
         'book': book.to_dict()
     })
-
 
 # POST /api/books - Create new book
 @app.route('/api/books', methods=['POST'])
@@ -114,8 +312,8 @@ def create_book():
         'book': new_book.to_dict()
     }), 201  # 201 = Created
 
-
 # PUT /api/books/<id> - Update book
+
 @app.route('/api/books/<int:id>', methods=['PUT'])
 def update_book(id):
     book = Book.query.get(id)
@@ -229,7 +427,6 @@ def index():
 
         <div class="endpoint">
             <span class="method get">GET</span>
-            <code>/api/books</code> - Get all books
             <br><a href="/api/books" target="_blank">Try it →</a>
         </div>
 
@@ -241,6 +438,7 @@ def index():
         <div class="endpoint">
             <span class="method post">POST</span>
             <code>/api/books</code> - Create new book
+            <br><a href="/api/books" target="_blank">Try it →</a>
         </div>
 
         <div class="endpoint">
@@ -289,15 +487,15 @@ def init_db():
     with app.app_context():
         db.create_all()
 
-        if Book.query.count() == 0:
-            sample_books = [
-                Book(title='Python Crash Course', author='Eric Matthes', year=2019, isbn='978-1593279288'),
-                Book(title='Flask Web Development', author='Miguel Grinberg', year=2018, isbn='978-1491991732'),
-                Book(title='Clean Code', author='Robert C. Martin', year=2008, isbn='978-0132350884'),
-            ]
-            db.session.add_all(sample_books)
-            db.session.commit()
-            print('Sample books added!')
+        # if Book.query.count() == 0:
+        #     sample_books = [
+        #         Book(title='Python Crash Course', , year=2019, isbn='978-1593279288'),
+        #         Book(title='Flask Web Development', author='Miguel Grinberg', year=2018, isbn='978-1491991732'),
+        #         Book(title='Clean Code', author='Robert C. Martin', year=2008, isbn='978-0132350884'),
+        #     ]
+        #     db.session.add_all(sample_books)
+        #     db.session.commit()
+        #     print('Sample books added!')
 
 
 if __name__ == '__main__':
