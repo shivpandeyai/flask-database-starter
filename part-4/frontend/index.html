@@ -169,53 +169,6 @@
         btn.classList.add('active');
     }
 </script>
-<div id="edit-modal" class="modal-overlay hidden">
-    <div class="modal-content">
-        <h2 id="modal-title">Edit Entry</h2>
-        <hr>
-        
-        <input type="hidden" id="edit-id">
-        <input type="hidden" id="edit-type">
-
-        <div id="edit-author-fields" class="hidden">
-            <div class="form-group">
-                <label>Name</label>
-                <input type="text" id="edit-auth-name">
-            </div>
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="edit-auth-email">
-            </div>
-            <div class="form-group">
-                <label>City</label>
-                <input type="text" id="edit-auth-city">
-            </div>
-            <div class="form-group">
-                <label>Bio</label>
-                <textarea id="edit-auth-bio" rows="3"></textarea>
-            </div>
-        </div>
-
-        <div id="edit-book-fields" class="hidden">
-            <div class="form-group">
-                <label>Book Title</label>
-                <input type="text" id="edit-book-title">
-            </div>
-            <div class="form-group">
-                <label>Year</label>
-                <input type="number" id="edit-book-year">
-            </div>
-            <div class="form-group">
-                <label>ISBN</label>
-                <input type="text" id="edit-book-isbn">
-            </div>
-        </div>
-
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
-            <button class="submit-btn" onclick="saveEdit()">Save Changes</button>
-            <button class="tab-btn" style="background: #95a5a6;" onclick="closeModal()">Cancel</button>
-        </div>
-    </div>
 
           <!-- Modal for editing entries -->
 
